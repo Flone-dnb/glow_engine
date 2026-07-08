@@ -6,6 +6,11 @@
 #include <string.h>
 #include <time.h>
 #include <io/paths.h>
+#if defined(WIN32) && defined(DEBUG)
+#define NOMINMAX
+#include <windows.h>
+#include <string>
+#endif
 
 static unsigned int error_count_logged = 0;
 static unsigned int warn_count_logged = 0;
@@ -76,6 +81,10 @@ prv_log(enum te_log_category category, const char* message, char* filepath, int 
 #if defined(DEBUG)
     // Also print to the terminal in debug builds.
     printf("%s %s\n", log_prefix, message);
+#if defined(WIN32)
+    std::string out = log_prefix + std::string(" ") + message + "\n";
+    OutputDebugStringA(out.c_str());
+#endif
 #endif
 
 //#if !defined(ENGINE_EDITOR) && defined(ENGINE_DEBUG_TOOLS)

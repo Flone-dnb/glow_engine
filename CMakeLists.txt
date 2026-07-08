@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.15)
 
 project(glow_engine CXX)
 
@@ -11,6 +11,7 @@ if(CMAKE_BUILD_TYPE MATCHES "^[Rr]elease")
     set(IS_RELEASE_BUILD ON CACHE BOOL "" FORCE)
 else()
     set(IS_RELEASE_BUILD OFF CACHE BOOL "" FORCE)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
 endif()
 
 # Prepare some variables.
@@ -52,21 +53,16 @@ function(glow_engine_configure_target TARGET_NAME)
     target_include_directories(${TARGET_NAME} PRIVATE src)
 
     # Enable ASan.
-    if(NOT IS_RELEASE_BUILD)
-	    message(STATUS "${TARGET_NAME}: Address sanitizer is enabled.")
+    if(NOT IS_RELEASE_BUILD AND NOT MSVC)
+        message(STATUS "${TARGET_NAME}: Address sanitizer is enabled.")
 	    target_compile_definitions(${TARGET_NAME} PRIVATE ENGINE_ASAN_ENABLED)
 
-        if(MSVC)
-            target_compile_options(${TARGET_NAME} PRIVATE /fsanitize=address)
-            target_link_options(${TARGET_NAME} PRIVATE /fsanitize=address)
-        else()
-        	target_compile_options(${TARGET_NAME} PRIVATE -fno-omit-frame-pointer)
-        	target_compile_options(${TARGET_NAME} PRIVATE -fsanitize=address)
-        	target_link_libraries(${TARGET_NAME} PRIVATE -fno-omit-frame-pointer)
-        	target_link_libraries(${TARGET_NAME} PRIVATE -fsanitize=address)
-        	if (CMAKE_COMPILER_IS_GNUCC)
-        	    target_compile_options(${TARGET_NAME} PRIVATE -static-libasan)
-        	endif()
+        target_compile_options(${TARGET_NAME} PRIVATE -fno-omit-frame-pointer)
+        target_compile_options(${TARGET_NAME} PRIVATE -fsanitize=address)
+        target_link_libraries(${TARGET_NAME} PRIVATE -fno-omit-frame-pointer)
+        target_link_libraries(${TARGET_NAME} PRIVATE -fsanitize=address)
+        if(CMAKE_COMPILER_IS_GNUCC)
+		   target_compile_options(${TARGET_NAME} PRIVATE -static-libasan)
         endif()
     else()
         message(STATUS "${TARGET_NAME}: Address sanitizer is disabled.")

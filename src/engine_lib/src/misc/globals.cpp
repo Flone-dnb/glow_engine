@@ -70,7 +70,7 @@ void
 ge_get_world_forward(float out[3]) {
     out[0] = 0.0f;
     out[1] = 0.0f;
-    out[2] = -1.0f;
+    out[2] = 1.0f;
 }
 
 void

@@ -32,6 +32,9 @@ class ge_game_instance {
     // Mark to exit game loop started in @ref run_game_loop.
     void stop_game_loop();
 
+    // Do not delete returned pointer, valid while game instance exists.
+    ge_world_manager* get_world_manager();
+
   protected:
 
     // Called when entered @ref run_game_loop.
@@ -45,7 +48,7 @@ class ge_game_instance {
 
   private:
     // Called by window in its destructor.
-    void destroy_window(ge_window* window);
+    void on_before_window_destructed(ge_window* window);
 
     // All active windows. Games usually have just 1 but in the editor
     // there can be more.
@@ -54,4 +57,5 @@ class ge_game_instance {
     ge_world_manager* world_manager;
 
     bool exit_game_loop;
+    bool dont_modify_windows_array;
 };

@@ -1,3 +1,9 @@
 [submodule "ext/SDL"]
 	path = ext/SDL
 	url = https://github.com/libsdl-org/SDL.git
+[submodule "ext/DirectX-Headers"]
+	path = ext/DirectX-Headers
+	url = https://github.com/microsoft/DirectX-Headers.git
+[submodule "ext/D3D12MemoryAllocator"]
+	path = ext/D3D12MemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator.git

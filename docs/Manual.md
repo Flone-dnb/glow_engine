@@ -19,3 +19,28 @@ Even if you haven't created a single window (headless mode) to start your game y
 In order to stop game loop you should use `ge_game_instance::stop_game_loop`, this will mark a flag to stop game loop and the `run_game_loop` function will exit. Before leaving game loop another virtual function of game instance will be called: `on_game_finished` - this is where you do game destruction/cleanup logic.
 
 After the game has started `on_tick` (virtual function of game instance) will be called every frame.
+
+# Game world and nodes
+
+After your game has started you need to create a new world. This is done using world manager:
+
+```Cpp
+void
+my_game_instance::on_game_started() {
+    // ... some code ...
+
+    ge_world* world = get_world_manager()->create_world();
+}
+```
+
+By default a world only has 1 node - root node.
+
+The engine uses nodes for game entities, this is similar to Godot's node system. You have a base class `ge_node` from which all nodes derive. This base class implements hierarchy functionality: allows attaching node to some (other) parent node. There are different kinds of nodes such as: `ge_spatial_node` (a node that implements positioning in 3D space, has properties like location, rotation and scale), `ge_mesh_node` (a node that derives from spatial node and implements 3D model rendering) and so on.
+
+Because world always has a valid spawned root node you spawn new game entities by attaching newly created nodes to already spawned ones, this makes the newly attached nodes to be spawned. This means that world operates only on spawned nodes.
+
+If you need a custom game entity you create a new node class derived from some of the existing node classes.
+
+# Memory leak checks
+
+The engine has a silly little memory leak checker that you can use on Windows, see contents of the file `src/engine_lib/mem_leak_check.hpp` and how it's used in the editor's `main.cpp`. If any memory leaks occurred after closing the game you will see a report about memory leaks in the log and in the Visual Studio's output tab (debug category).

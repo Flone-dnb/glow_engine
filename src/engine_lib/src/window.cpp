@@ -11,7 +11,7 @@ ge_window::ge_window(ge_game_instance* game_instance, SDL_Window* sdl_window) {
     requested_to_close = false;
 }
 
-ge_window::~ge_window() { game_instance->destroy_window(this); }
+ge_window::~ge_window() { game_instance->on_before_window_destructed(this); }
 
 void
 ge_window::close() {

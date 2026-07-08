@@ -12,6 +12,7 @@
 ge_game_instance::ge_game_instance() {
     world_manager = new ge_world_manager();
     exit_game_loop = false;
+    dont_modify_windows_array = false;
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
         ge_log_error(SDL_GetError());
@@ -20,6 +21,10 @@ ge_game_instance::ge_game_instance() {
 }
 
 ge_game_instance::~ge_game_instance() {
+    if (!windows.empty()) {
+        ge_log_error_fmt("game instance is being destroyed but there are still %zu window(s) exist", windows.size());
+        abort();
+    }
     delete world_manager;
     SDL_Quit();
 }
@@ -88,23 +93,27 @@ ge_game_instance::create_window_fullscreen(const char* title) {
 }
 
 void
-ge_game_instance::destroy_window(ge_window* window) {
+ge_game_instance::on_before_window_destructed(ge_window* window) {
     SDL_DestroyWindow(window->sdl_window);
 
-    for (auto it = windows.begin(); it != windows.end(); it++) {
-        if ((*it) == window) {
-            windows.erase(it);
-            return;
+    if (!dont_modify_windows_array) {
+        for (auto it = windows.begin(); it != windows.end(); it++) {
+            if ((*it) == window) {
+                windows.erase(it);
+                return;
+            }
         }
     }
-
-    ge_log_error("unable to find the specified window to be destroyed");
-    abort();
 }
 
 void
 ge_game_instance::stop_game_loop() {
     exit_game_loop = true;
+}
+
+ge_world_manager*
+ge_game_instance::get_world_manager() {
+    return world_manager;
 }
 
 void
@@ -137,8 +146,10 @@ ge_game_instance::run_game_loop(unsigned int headless_tickrate) {
 
             window->process_window_events();
             if (window->requested_to_close) {
-                SDL_DestroyWindow(window->sdl_window);
+                dont_modify_windows_array = true;
+                delete window;
                 it = windows.erase(it);
+                dont_modify_windows_array = false;
                 continue;
             }
 
@@ -176,9 +187,11 @@ ge_game_instance::run_game_loop(unsigned int headless_tickrate) {
     world_manager->destroy_worlds();
 
     // Destroy left windows.
+    dont_modify_windows_array = true;
     for (ge_window* window : windows) {
-        SDL_DestroyWindow(window->sdl_window);
+        delete window;
     }
+    dont_modify_windows_array = false;
     windows.clear();
     windows.shrink_to_fit();
 }
