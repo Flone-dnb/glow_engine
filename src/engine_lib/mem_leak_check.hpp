@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <mutex>
 #include <io/log.h>
+#include <intrin.h>
 
 #define NOMINMAX
 #include <windows.h>
@@ -46,6 +47,7 @@ finish_mem_leak_checks() {
             ge_log_error_fmt("%zu. ptr with data of size %zu bytes leaked from %s", idx, it->second.size, it->second.func);
         }
         ge_log_error("");
+        __debugbreak();
     } else {
         ge_log_info("no memory leaks detected");
     }
