@@ -93,15 +93,38 @@ ge_node::despawn_and_detach() {
     despawn();
 }
 
+ge_node*
+ge_node::get_parent_node() {
+    return parent_node;
+}
+
+const std::vector<ge_node*>& const
+ge_node::get_child_nodes_ref() const {
+    return child_nodes;
+}
+
+ge_world*
+ge_node::get_world_if_spawned() {
+    return world;
+}
+
+bool
+ge_node::is_spawned() {
+    return world != nullptr;
+}
+
 void
 ge_node::spawn(ge_world* world) {
     this->world = world;
+
+    // First notify, then update all child nodes to avoid "holes" in the spawned node tree.
+    on_after_spawned();
 
     for (ge_node* child_node : child_nodes) {
         child_node->spawn(world);
     }
 
-    on_after_spawned();
+    on_after_child_nodes_spawned();
 }
 
 void

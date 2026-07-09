@@ -22,9 +22,6 @@ class ge_node {
 
     void set_name(const char* name);
 
-    // Do not delete returned string, valid while the node exists and while its name is not changed.
-    const char* get_name();
-
     // This is the only function to create node hierarchy, with this you can not only attach child
     // nodes but also change parent nodes: if node A already has a parent you can attach it to another parent
     // by using this function.
@@ -36,9 +33,26 @@ class ge_node {
     // After this function the caller is responsible for destroying the node.
     void despawn_and_detach();
 
+    ge_node* get_parent_node();
+    const std::vector<ge_node*>& const get_child_nodes_ref() const;
+
+    // Returns `nullptr` if not spawned, named this was specifically to tell that `nullptr` can be returned.
+    ge_world* get_world_if_spawned();
+
+    // Do not delete returned string, valid while the node exists and while its name is not changed.
+    const char* get_name();
+
+    bool is_spawned();
+
   protected:
+    // Called after this node is spawned but before child nodes are spawned,
+    // also see @ref on_after_child_nodes_spawned.
     virtual void
     on_after_spawned() {}
+
+    // Called after @ref on_after_spawned and after all child nodes were spawned.
+    virtual void
+    on_after_child_nodes_spawned() {}
 
     virtual void
     on_before_despawned() {}

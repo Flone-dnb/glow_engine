@@ -3,6 +3,7 @@ project(engine_lib CXX)
 set(PROJECT_SOURCES
     include/game_instance.h
     include/window.h
+    include/math_funcs.h
     include/world/world_manager.h
     include/world/world.h
     include/render/render_target.h
@@ -68,6 +69,24 @@ set(SDL_INSTALL_TESTS OFF CACHE BOOL "" FORCE)
 target_include_directories(${ENGINE_LIB_DEPS_TARGET} SYSTEM INTERFACE ${RELATIVE_EXT_PATH}/SDL/include)
 add_subdirectory(${RELATIVE_EXT_PATH}/SDL ${DEPENDENCY_BUILD_DIR_NAME}/SDL EXCLUDE_FROM_ALL)
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE SDL3::SDL3)
+
+# Add GLM.
+message(STATUS "${PROJECT_NAME}: adding dependency \"GLM\"...")
+set(GLM_ENABLE_SIMD_SSE2 ON CACHE BOOL "" FORCE)
+set(GLM_ENABLE_SIMD_SSE3 ON CACHE BOOL "" FORCE)
+set(GLM_ENABLE_SIMD_SSSE3 ON CACHE BOOL "" FORCE)
+set(GLM_ENABLE_SIMD_SSE4_1 ON CACHE BOOL "" FORCE)
+set(GLM_ENABLE_SIMD_SSE4_2 ON CACHE BOOL "" FORCE)
+set(GLM_ENABLE_SIMD_AVX ON CACHE BOOL "" FORCE)
+set(GLM_ENABLE_SIMD_AVX2 ON CACHE BOOL "" FORCE)
+add_subdirectory(${RELATIVE_EXT_PATH}/glm ${DEPENDENCY_BUILD_DIR_NAME}/glm SYSTEM)
+target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE glm)
+target_compile_definitions(glm PUBLIC
+    GLM_FORCE_LEFT_HANDED
+    GLM_FORCE_DEPTH_ZERO_TO_ONE
+    GLM_FORCE_INLINE
+    GLM_FORCE_XYZW_ONLY
+    GLM_ENABLE_EXPERIMENTAL)
 
 # Win32 specific dependencies:
 if (WIN32)
