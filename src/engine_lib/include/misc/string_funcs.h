@@ -1,10 +1,10 @@
 #pragma once
 
+#include <string>
 #include <wchar.h>
 
 // dst_strlen will store strlen() or the returned string.
-// You must free returned pointer when you no longer need it.
-char* wchar_to_char(const wchar_t* src, unsigned int* dst_strlen);
+std::string wchar_to_char(const wchar_t* src);
 
 // dst_strlen will store wcslen() of the returned string.
 // You must free returned pointer when you no longer need it.

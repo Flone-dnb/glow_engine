@@ -3,6 +3,7 @@
 #include <io/log.h>
 #include <window.h>
 #include <world/world_manager.h>
+#include <render/renderer.h>
 #include <misc/globals.h>
 #define SDL_MAIN_HANDLED
 #include <SDL3/SDL_init.h>
@@ -10,14 +11,30 @@
 #include <SDL3/SDL_timer.h>
 
 ge_game_instance::ge_game_instance() {
-    world_manager = new ge_world_manager();
-    exit_game_loop = false;
-    dont_modify_windows_array = false;
+    ge_log_info("state:");
+#if defined(ENGINE_ASAN_ENABLED)
+    ge_log_info("- AddressSanitizer (ASan) is enabled, expect increased RAM usage!");
+#endif
+#if defined(DEBUG)
+    ge_log_info("- DEBUG is defined, running debug build");
+#else
+    ge_log_info("- DEBUG is NOT defined, running release build");
+#endif
+#if defined(ENGINE_DEBUG_TOOLS)
+    ge_log_info("- ENGINE_DEBUG_TOOLS is defined, debug tools are enabled");
+#else
+    ge_log_info("- ENGINE_DEBUG_TOOLS is NOT defined");
+#endif
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
         ge_log_error(SDL_GetError());
         abort();
     }
+
+    world_manager = new ge_world_manager(this);
+    renderer = ge_renderer::create(this);
+    exit_game_loop = false;
+    dont_modify_windows_array = false;
 }
 
 ge_game_instance::~ge_game_instance() {
@@ -26,6 +43,7 @@ ge_game_instance::~ge_game_instance() {
         abort();
     }
     delete world_manager;
+    delete renderer;
     SDL_Quit();
 }
 
@@ -44,15 +62,16 @@ ge_game_instance::create_window(unsigned int width, unsigned int height, const c
     }
     ge_log_info_fmt("created window of size %dx%d", x, y);
 
-    ge_window* window = new ge_window(this, sdl_window);
+    ge_window* window = new ge_window(this, sdl_window, false);
     windows.push_back(window);
+    renderer->on_after_new_window_created(window);
 
     return window;
 }
 
 ge_window*
 ge_game_instance::create_window_maximized(const char* title) {
-    SDL_Window* sdl_window = SDL_CreateWindow(title, 0, 0, SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED);
+    SDL_Window* sdl_window = SDL_CreateWindow(title, 800, 600, SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED);
     if (sdl_window == nullptr) {
         ge_log_error(SDL_GetError());
         abort();
@@ -65,8 +84,9 @@ ge_game_instance::create_window_maximized(const char* title) {
     }
     ge_log_info_fmt("created window of size %dx%d", x, y);
 
-    ge_window* window = new ge_window(this, sdl_window);
+    ge_window* window = new ge_window(this, sdl_window, false);
     windows.push_back(window);
+    renderer->on_after_new_window_created(window);
 
     return window;
 }
@@ -86,8 +106,9 @@ ge_game_instance::create_window_fullscreen(const char* title) {
     }
     ge_log_info_fmt("created window of size %dx%d", x, y);
 
-    ge_window* window = new ge_window(this, sdl_window);
+    ge_window* window = new ge_window(this, sdl_window, true);
     windows.push_back(window);
+    renderer->on_after_new_window_created(window);
 
     return window;
 }
@@ -111,21 +132,26 @@ ge_game_instance::stop_game_loop() {
     exit_game_loop = true;
 }
 
+const std::vector<ge_window*>&
+ge_game_instance::get_windows() const {
+    return windows;
+}
+
 ge_world_manager*
 ge_game_instance::get_world_manager() {
     return world_manager;
 }
 
+ge_renderer*
+ge_game_instance::get_renderer() {
+    return renderer;
+}
+
 void
 ge_game_instance::run_game_loop(unsigned int headless_tickrate) {
-    on_game_started();
+    const bool is_headless_mode = headless_tickrate > 0;
 
-    if (headless_tickrate > 0 && !windows.empty()) {
-        ge_log_error(
-            "a non-zero tickrate for the headless mode was specified but some windows exist, ignoring headless "
-            "tickrate");
-        headless_tickrate = 0;
-    }
+    on_game_started();
 
     // Used to calculate delta time.
     Uint64 current_time_counter = SDL_GetPerformanceCounter();
@@ -155,21 +181,22 @@ ge_game_instance::run_game_loop(unsigned int headless_tickrate) {
 
             it++;
         }
-        if (headless_tickrate == 0 && windows.empty()) {
+        if (!is_headless_mode && windows.empty()) {
             // Last window was closed - end game.
+            ge_log_info("all windows are closed, ending game because not running in headless mode");
             break;
         }
 
-        // Tick systems.
         world_manager->on_tick();
         on_tick(delta_time_sec);
 
-        // Draw windows.
+        renderer->draw_next_frame();
+
         for (ge_window* window : windows) {
-            window->draw();
+            window->draw_render_target();
         }
 
-        if (headless_tickrate > 0) {
+        if (is_headless_mode && windows.empty()) {
             float time_took_ms = (float)((SDL_GetPerformanceCounter() - current_time_counter) * 1000.0f)
                                  / (float)(SDL_GetPerformanceFrequency());
             float target_time_ms = 1000.0f / (float)headless_tickrate;

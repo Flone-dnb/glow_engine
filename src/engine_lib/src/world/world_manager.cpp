@@ -3,6 +3,8 @@
 #include <io/log.h>
 #include <world/world.h>
 
+ge_world_manager::ge_world_manager(ge_game_instance* game_instance) { this->game_instance = game_instance; }
+
 ge_world_manager::~ge_world_manager() {
     if (!worlds.empty()) {
         ge_log_error_fmt("world manager is being destroyed but %zu world(s) still exist", worlds.size());
@@ -38,6 +40,11 @@ ge_world_manager::destroy_worlds() {
     }
     worlds.clear();
     worlds.shrink_to_fit();
+}
+
+ge_game_instance*
+ge_world_manager::get_game_instance() {
+    return game_instance;
 }
 
 void

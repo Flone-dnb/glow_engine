@@ -5,22 +5,17 @@
 #include <io/log.h>
 #include <limits.h>
 
-char*
-wchar_to_char(const wchar_t* src, unsigned int* dst_strlen) {
+std::string
+wchar_to_char(const wchar_t* src) {
     const size_t len = wcstombs(NULL, src, 0);
     if (len == (size_t)-1) {
         ge_log_error("failed to convert wchar* to char*");
         abort();
     }
 
-    char* dst = (char*)malloc(sizeof(char) * (len + 1));
-    wcstombs(dst, src, len + 1);
-
-    if (len > 0xffffffff) {
-        ge_log_error("failed to convert wchar* to char* - text is too long");
-        abort();
-    }
-    (*dst_strlen) = (unsigned int)len;
+    std::string dst;
+    dst.resize(len);
+    wcstombs((char*)dst.data(), src, len + 1);
 
     return dst;
 }

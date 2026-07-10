@@ -41,6 +41,9 @@ class ge_spatial_node : public ge_node {
     const glm::vec3& get_world_scale() const;
     const glm::mat4& get_world_mat() const;
 
+    // Returns closest spatial parent in the parent node chain or `nullptr` otherwise.
+    ge_spatial_node* get_spatial_parent();
+
   protected:
     virtual void on_after_spawned() override;
     virtual void on_after_parent_changed(bool this_nodes_parent) override;

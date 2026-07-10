@@ -18,11 +18,14 @@ class ge_world {
     // Returns always spawned root node of the world.
     ge_node* get_root_node();
 
+    // Returns always valid pointer.
+    ge_world_manager* get_world_manager();
+
   private:
-    ge_world(ge_world_manager* manager);
+    ge_world(ge_world_manager* world_manager);
 
     // Always valid pointer, root node of the world.
     ge_node* root_node;
 
-    ge_world_manager* manager;
+    ge_world_manager* world_manager;
 };

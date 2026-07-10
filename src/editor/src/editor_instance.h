@@ -1,6 +1,8 @@
 #include <game_instance.h>
 
+class ge_window;
 class ge_render_target;
+class ge_camera_node;
 
 class ge_editor_instance : public ge_game_instance {
   public:
@@ -12,9 +14,11 @@ class ge_editor_instance : public ge_game_instance {
 
   protected:
     virtual void on_game_started() override;
+    virtual void on_window_size_changed(ge_window* changed_window) override;
     virtual void on_game_finished() override;
 
   private:
-    ge_window* main_window;
-    ge_render_target* main_render_target;
+    ge_window* window;
+    ge_render_target* render_target;
+    ge_camera_node* viewport_camera;
 };

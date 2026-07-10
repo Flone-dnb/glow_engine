@@ -66,25 +66,19 @@ ge_get_app_name(void) {
     return &cached_app_name[0];
 }
 
-void
-ge_get_world_forward(float out[3]) {
-    out[0] = 0.0f;
-    out[1] = 0.0f;
-    out[2] = 1.0f;
+glm::vec3
+ge_get_world_forward() {
+    return glm::vec3(0.0f, 0.0f, 1.0f);
 }
 
-void
-ge_get_world_right(float out[3]) {
-    out[0] = 1.0f;
-    out[1] = 0.0f;
-    out[2] = 0.0f;
+glm::vec3
+ge_get_world_right() {
+    return glm::vec3(1.0f, 0.0f, 0.0f);
 }
 
-void
-ge_get_world_up(float out[3]) {
-    out[0] = 0.0f;
-    out[1] = 1.0f;
-    out[2] = 0.0f;
+glm::vec3
+ge_get_world_up() {
+    return glm::vec3(0.0f, 1.0f, 0.0f);
 }
 
 void

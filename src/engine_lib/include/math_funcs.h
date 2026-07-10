@@ -79,9 +79,7 @@ static inline glm::vec3
 ge_math_convert_rot_to_norm_dir(const glm::vec3& rot_deg) {
     glm::mat4 rot_mat = ge_math_make_rotation_mat(rot_deg);
 
-    glm::vec4 forward;
-    ge_get_world_forward(&forward.x);
-    forward.w = 0.0f;
+    glm::vec4 forward = glm::vec4(ge_get_world_forward(), 0.0f);
 
     glm::vec4 result = rot_mat * forward;
     return result;

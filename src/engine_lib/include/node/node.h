@@ -34,7 +34,7 @@ class ge_node {
     void despawn_and_detach();
 
     ge_node* get_parent_node();
-    const std::vector<ge_node*>& const get_child_nodes_ref() const;
+    const std::vector<ge_node*>& get_child_nodes_ref() const;
 
     // Returns `nullptr` if not spawned, named this was specifically to tell that `nullptr` can be returned.
     ge_world* get_world_if_spawned();

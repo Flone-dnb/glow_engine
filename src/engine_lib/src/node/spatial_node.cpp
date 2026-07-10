@@ -153,6 +153,11 @@ ge_spatial_node::get_world_mat() const {
     return world_mat;
 }
 
+ge_spatial_node*
+ge_spatial_node::get_spatial_parent() {
+    return spatial_parent;
+}
+
 static ge_spatial_node*
 find_spatial_parent(ge_node* parent) {
     if (parent == nullptr) {
@@ -215,17 +220,9 @@ ge_spatial_node::recalc_world_transform(bool notify_children) {
 
     // recalculate world directions
 
-    glm::vec4 dir;
-    dir.w = 0.0f;
-
-    ge_get_world_forward(&dir.x);
-    world_forward = world_mat * dir;
-
-    ge_get_world_right(&dir.x);
-    world_right = world_mat * dir;
-
-    ge_get_world_up(&dir.x);
-    world_up = world_mat * dir;
+    world_forward = world_mat * glm::vec4(ge_get_world_forward(), 0.0f);
+    world_right = world_mat * glm::vec4(ge_get_world_right(), 0.0f);
+    world_up = world_mat * glm::vec4(ge_get_world_up(), 0.0f);
 
     // notify
 

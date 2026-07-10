@@ -44,3 +44,7 @@ If you need a custom game entity you create a new node class derived from some o
 # Memory leak checks
 
 The engine has a silly little memory leak checker that you can use on Windows, see contents of the file `src/engine_lib/mem_leak_check.hpp` and how it's used in the editor's `main.cpp`. If any memory leaks occurred after closing the game you will see a report about memory leaks in the log and in the Visual Studio's output tab (debug category).
+
+# Headless mode
+
+In case you want to run a game server, possibly on a Linux machine, all you need to do is to not create any windows and specify a non-zero tickrate to `run_game_loop`.
