@@ -58,27 +58,28 @@ ge_directx_renderer::ge_directx_renderer(ge_game_instance* game_instance) : ge_r
     DWORD debugFactoryFlags = 0;
 #if defined(DEBUG)
     {
+        dx_debug = nullptr;
         HRESULT result = D3D12GetDebugInterface(IID_PPV_ARGS(&dx_debug));
         if (FAILED(result)) {
-            ge_log_error(hresult_to_string(result).c_str());
-            abort();
+            ge_log_warn_fmt("unable to setup directx debug layer: %s", hresult_to_string(result).c_str());
+        } else {
+            dx_debug->EnableDebugLayer();
+
+            ComPtr<IDXGIInfoQueue> dx_info_queue;
+            result = DXGIGetDebugInterface1(0, IID_PPV_ARGS(dx_info_queue.GetAddressOf()));
+            if (FAILED(result)) {
+                ge_log_error(hresult_to_string(result).c_str());
+                abort();
+            }
+
+            dx_info_queue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, 1);
+            dx_info_queue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, 1);
+            dx_info_queue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING, 1);
+
+            debugFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
+
+            ge_log_info("D3D debug layer enabled");
         }
-        dx_debug->EnableDebugLayer();
-
-        ComPtr<IDXGIInfoQueue> dx_info_queue;
-        result = DXGIGetDebugInterface1(0, IID_PPV_ARGS(dx_info_queue.GetAddressOf()));
-        if (FAILED(result)) {
-            ge_log_error(hresult_to_string(result).c_str());
-            abort();
-        }
-
-        dx_info_queue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, 1);
-        dx_info_queue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, 1);
-        dx_info_queue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING, 1);
-
-        debugFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
-
-        ge_log_info("D3D debug layer enabled");
     }
 #endif
 
@@ -110,20 +111,22 @@ ge_directx_renderer::ge_directx_renderer(ge_game_instance* game_instance) : ge_r
     }
 
 #if defined(DEBUG)
-    // Create debug message queue for message callback.
-    // Apparently the ID3D12InfoQueue1 interface to register message callback is only
-    // available on Windows 11 so we should just log the event here using the `info` category.
-    result = dx_device->QueryInterface(IID_PPV_ARGS(&dx_debug_info_queue));
-    if (FAILED(result)) {
-        ge_log_info("ID3D12InfoQueue1 does not seem to be available on this system, failed to query the interface");
-    } else {
-        // Register debug message callback.
-        DWORD unregisterCookie = 0;
-        result = dx_debug_info_queue->RegisterMessageCallback(
-            dx_debug_layer_msg_callback, D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, &unregisterCookie);
+    if (dx_debug != nullptr) {
+        // Create debug message queue for message callback.
+        // Apparently the ID3D12InfoQueue1 interface to register message callback is only
+        // available on Windows 11 so we should just log the event here using the `info` category.
+        result = dx_device->QueryInterface(IID_PPV_ARGS(&dx_debug_info_queue));
         if (FAILED(result)) {
-            ge_log_error(hresult_to_string(result).c_str());
-            abort();
+            ge_log_info("ID3D12InfoQueue1 does not seem to be available on this system, failed to query the interface");
+        } else {
+            // Register debug message callback.
+            DWORD unregisterCookie = 0;
+            result = dx_debug_info_queue->RegisterMessageCallback(
+                dx_debug_layer_msg_callback, D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, &unregisterCookie);
+            if (FAILED(result)) {
+                ge_log_error(hresult_to_string(result).c_str());
+                abort();
+            }
         }
     }
 #endif
