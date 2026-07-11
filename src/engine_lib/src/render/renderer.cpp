@@ -1,5 +1,6 @@
 #include <render/renderer.h>
 
+#include <stdlib.h>
 #include <io/log.h>
 
 #if defined(WIN32)
@@ -13,7 +14,7 @@ ge_renderer::create(ge_game_instance* game_instance) {
     return new ge_directx_renderer(game_instance);
 #else
     ge_log_info("creating a dummy renderer (rendering is disabled)");
-    return new ge_dummy_renderer();
+    return new ge_dummy_renderer(game_instance);
 #endif
 }
 

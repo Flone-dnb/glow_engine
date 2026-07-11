@@ -30,7 +30,7 @@ function(glow_engine_configure_target TARGET_NAME)
     if(MSVC)
         target_compile_options(${PROJECT_NAME} PUBLIC /W3 /WX /wd4996 /utf-8)
     else()
-        target_compile_options(${TARGET_NAME} PUBLIC -Wall -Wextra -Werror -Wconversion -Wno-unused-but-set-parameter)
+        target_compile_options(${TARGET_NAME} PUBLIC -Wall -Wextra -Werror -Wconversion -Wno-unused-but-set-parameter -Wno-unused-parameter)
     endif()
 
     # Add `DEBUG` macro in non-release builds.

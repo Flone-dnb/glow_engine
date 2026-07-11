@@ -10,6 +10,8 @@
 #include <windows.h>
 #elif __linux__
 #include <unistd.h>
+#include <time.h>
+#include <errno.h>
 #else
 #error "unsupported OS"
 #endif
@@ -83,7 +85,23 @@ ge_get_world_up() {
 
 void
 ge_sleep(float ms) {
+#if defined(WIN32)
     timeBeginPeriod(1);
     Sleep((unsigned long)ms);
     timeEndPeriod(1);
+#else
+    long ns = (long)((double)ms * 1000000.0);
+
+    struct timespec requested;
+    struct timespec remaining;
+    requested.tv_sec = 0;
+    requested.tv_nsec = ns;
+    while (nanosleep(&requested, &remaining) == -1) {
+        if (errno == EINTR) {
+            requested = remaining;
+        } else {
+            break;
+        }
+    }
+#endif
 }

@@ -22,5 +22,5 @@ unsigned int ge_log_get_error_count_logged(void);
 //                                       PRIVATE API
 // ------------------------------------------------------------------------------------------------
 
-void prv_log(enum te_log_category category, const char* message, char* filepath, int line);
-void prv_log_fmt(enum te_log_category category, char* filepath, int line, const char* fmt, ...);
+void prv_log(enum te_log_category category, const char* message, const char* filepath, int line);
+void prv_log_fmt(enum te_log_category category, const char* filepath, int line, const char* fmt, ...);

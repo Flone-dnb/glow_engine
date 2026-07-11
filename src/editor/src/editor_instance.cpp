@@ -49,9 +49,6 @@ ge_editor_instance::on_window_size_changed(ge_window* changed_window) {
 
 void
 ge_editor_instance::on_game_finished() {
-    window->set_render_target(nullptr);
-    window = nullptr;
-
     delete render_target;
     render_target = nullptr;
 }

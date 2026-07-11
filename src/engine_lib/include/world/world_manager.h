@@ -3,6 +3,7 @@
 #include <vector>
 
 class ge_world;
+class ge_game_instance;
 
 // Responsible for creating and destroying game world.
 class ge_world_manager {

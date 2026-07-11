@@ -7,6 +7,7 @@
 #include "../mem_leak_check.hpp"
 #endif
 
+#include <io/log.h>
 #include "editor_instance.h"
 
 int

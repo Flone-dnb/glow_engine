@@ -1,5 +1,6 @@
 #include <node/camera_node.h>
 
+#include <string.h>
 #include <world/world.h>
 #include <world/world_manager.h>
 #include <game_instance.h>

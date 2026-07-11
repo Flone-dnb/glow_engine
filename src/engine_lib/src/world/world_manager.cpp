@@ -1,5 +1,6 @@
 #include <world/world_manager.h>
 
+#include <stdlib.h>
 #include <io/log.h>
 #include <world/world.h>
 

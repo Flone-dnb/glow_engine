@@ -49,7 +49,8 @@ ge_node::attach_child_node(ge_node* child) {
             }
         }
         if (!found) {
-            ge_log_error_fmt("unable to find child node \"%s\" in the parent node's array of child nodes", child->name.c_str());
+            ge_log_error_fmt(
+                "unable to find child node \"%s\" in the parent node's array of child nodes", child->name.c_str());
             abort();
         }
     }
@@ -83,7 +84,7 @@ ge_node::notify_about_parent_changed(bool this_nodes_parent) {
     on_after_parent_changed(this_nodes_parent);
 
     for (ge_node* node : child_nodes) {
-        notify_about_parent_changed(false);
+        node->notify_about_parent_changed(false);
     }
 }
 
@@ -98,7 +99,7 @@ ge_node::get_parent_node() {
     return parent_node;
 }
 
-const std::vector<ge_node*>& const
+const std::vector<ge_node*>&
 ge_node::get_child_nodes_ref() const {
     return child_nodes;
 }

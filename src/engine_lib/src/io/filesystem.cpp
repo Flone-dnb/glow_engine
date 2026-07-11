@@ -133,7 +133,8 @@ ge_filesystem_copy_file(const char* src, const char* dst) {
         return;
     }
 
-    struct stat file_stat = {0};
+    struct stat file_stat;
+    memset(&file_stat, 0, sizeof(file_stat));
     int result = fstat(input, &file_stat);
     off_t copied = 0;
     while (result == 0 && copied < file_stat.st_size) {
@@ -240,7 +241,7 @@ ge_filesystem_get_parent_path(const std::string& path) {
         return nullptr;
     }
 
-    unsigned int pos = path.size() - 1;
+    size_t pos = path.size() - 1;
 #if defined(WIN32)
     if (path[pos] == '\\' || path[pos] == '/')
 #else
@@ -271,14 +272,15 @@ ge_filesystem_get_parent_path(const std::string& path) {
     return out;
 }
 
-std::string filesystem_append_path(const std::string& path, const std::string& add) {
+std::string
+filesystem_append_path(const std::string& path, const std::string& add) {
     const bool have_slash = path[path.size() - 1] == '/' || path[path.size() - 1] == '\\';
 
     std::string out;
     out.reserve(path.size() + !have_slash + add.size());
 
     out += path;
-    if (!have_slash){
+    if (!have_slash) {
 #if defined(WIN32)
         out += "\\";
 #else
@@ -298,7 +300,7 @@ ge_filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count)
     // Count number of entries.
     DIR* dir = opendir(path_to_dir);
     if (dir == nullptr) {
-        log_error_fmt("unable to open the directory \"%s\" (does path exist?)", path_to_dir);
+        ge_log_error_fmt("unable to open the directory \"%s\" (does path exist?)", path_to_dir);
         abort();
     }
     struct dirent* entry;
@@ -313,12 +315,12 @@ ge_filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count)
     if ((*entry_count) == 0) {
         return nullptr;
     }
-    te_filesystem_entry* entries = malloc(sizeof(te_filesystem_entry) * (*entry_count));
+    te_filesystem_entry* entries = (te_filesystem_entry*)malloc(sizeof(te_filesystem_entry) * (*entry_count));
 
     // Save entries.
     dir = opendir(path_to_dir);
     if (dir == nullptr) {
-        log_error_fmt("unable to open the directory \"%s\" (does path exist?)", path_to_dir);
+        ge_log_error_fmt("unable to open the directory \"%s\" (does path exist?)", path_to_dir);
         abort();
     }
     unsigned int i = 0;

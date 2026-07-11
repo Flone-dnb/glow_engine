@@ -13,7 +13,7 @@ ge_math_fix_diagonal_movement_speedup(glm::vec2& movement) {
         return;
     }
 
-    const float length = sqrt(square_sum);
+    const float length = sqrtf(square_sum);
     if (length <= 1.0f) { // only normalize when exceeding 1 to keep small gamepad thumbstick movements
         return;
     }
@@ -56,10 +56,10 @@ ge_math_convert_norm_dir_to_rot(const glm::vec3& dir) {
     out.y = glm::degrees(atan2f(dir[0], dir[2]));
     out.z = 0.0f;
 
-    if (isnan(out.x)) {
+    if (std::isnan(out.x)) {
         out.x = 0.0f;
     }
-    if (isnan(out.y)) {
+    if (std::isnan(out.y)) {
         out.y = 0.0f;
     }
 
@@ -118,5 +118,5 @@ static inline float
 ge_math_wrap_to_range(float value, float min, float max) {
     float width = max - min;
     float offsetValue = value - min;
-    return (offsetValue - (floor(offsetValue / width) * width)) + min;
+    return (offsetValue - (floorf(offsetValue / width) * width)) + min;
 }

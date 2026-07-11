@@ -2,6 +2,7 @@
 
 #include <io/log.h>
 #include <game_instance.h>
+#include <render/swap_chain.h>
 #include <SDL3/SDL_events.h>
 
 ge_window::ge_window(ge_game_instance* game_instance, SDL_Window* sdl_window, bool is_fullscreen) {

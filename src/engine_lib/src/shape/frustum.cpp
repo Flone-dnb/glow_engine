@@ -7,8 +7,8 @@
 
 ge_frustum::ge_frustum(
     const glm::vec3& location, const glm::vec3& forward, const glm::vec3& right, const glm::vec3& up, float near_plane,
-    float far_plane, float fov_deg, float aspect_ratio) {
-    float tan_half_fov = std::tan(0.5f * glm::radians(fov_deg));
+    float far_plane, unsigned int fov_deg, float aspect_ratio) {
+    float tan_half_fov = std::tan(0.5f * glm::radians((float)fov_deg));
     float far_half_height = far_plane * tan_half_fov;
     float far_half_width = far_half_height * aspect_ratio;
 

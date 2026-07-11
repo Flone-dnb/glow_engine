@@ -126,12 +126,10 @@ ge_spatial_node::get_world_up() const {
     return world_up;
 }
 
-#pragma warning(disable : 4172) // returning address of local variable or temporary
 const glm::vec3&
 ge_spatial_node::get_world_location() const {
-    return world_mat[3];
+    return world_location;
 }
-#pragma warning(pop)
 
 const glm::vec3&
 ge_spatial_node::get_world_rotation() const {
@@ -214,6 +212,7 @@ ge_spatial_node::recalc_world_transform(bool notify_children) {
         parent_world_scale = spatial_parent->get_world_scale();
     }
 
+    world_location = world_mat[3];
     world_rot_quat = parent_world_rot_quat * glm::toQuat(local_rotation_mat);
     world_rot = glm::degrees(glm::eulerAngles(world_rot_quat));
     world_scale = parent_world_scale * relative_scale;

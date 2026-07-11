@@ -1,5 +1,6 @@
 #include <game_instance.h>
 
+#include <stdlib.h>
 #include <io/log.h>
 #include <window.h>
 #include <world/world_manager.h>
@@ -49,7 +50,7 @@ ge_game_instance::~ge_game_instance() {
 
 ge_window*
 ge_game_instance::create_window(unsigned int width, unsigned int height, const char* title) {
-    SDL_Window* sdl_window = SDL_CreateWindow(title, width, height, SDL_WINDOW_RESIZABLE);
+    SDL_Window* sdl_window = SDL_CreateWindow(title, (int)width, (int)height, SDL_WINDOW_RESIZABLE);
     if (sdl_window == nullptr) {
         ge_log_error(SDL_GetError());
         abort();
@@ -163,7 +164,7 @@ ge_game_instance::run_game_loop(unsigned int headless_tickrate) {
         prev_time_counter = current_time_counter;
         current_time_counter = SDL_GetPerformanceCounter();
         const float delta_time_ms =
-            (float)((current_time_counter - prev_time_counter) * 1000.0f) / (float)(SDL_GetPerformanceFrequency());
+            (float)((current_time_counter - prev_time_counter) * 1000) / (float)(SDL_GetPerformanceFrequency());
         delta_time_sec = (float)(delta_time_ms * 0.001f);
 
         // Process window events.
@@ -197,7 +198,7 @@ ge_game_instance::run_game_loop(unsigned int headless_tickrate) {
         }
 
         if (is_headless_mode && windows.empty()) {
-            float time_took_ms = (float)((SDL_GetPerformanceCounter() - current_time_counter) * 1000.0f)
+            float time_took_ms = (float)((SDL_GetPerformanceCounter() - current_time_counter) * 1000)
                                  / (float)(SDL_GetPerformanceFrequency());
             float target_time_ms = 1000.0f / (float)headless_tickrate;
             float sleep_time_ms = target_time_ms - time_took_ms;

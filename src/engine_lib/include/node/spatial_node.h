@@ -64,6 +64,7 @@ class ge_spatial_node : public ge_node {
 
     glm::mat4 world_mat;
 
+    glm::vec3 world_location;
     glm::quat world_rot_quat;
     glm::vec3 world_rot;
     glm::vec3 world_scale;

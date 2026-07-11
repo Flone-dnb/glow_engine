@@ -26,7 +26,7 @@ ge_log_get_error_count_logged(void) {
 }
 
 void
-prv_log(enum te_log_category category, const char* message, char* filepath, int line) {
+prv_log(enum te_log_category category, const char* message, const char* filepath, int line) {
     // Prepare time string.
     time_t t = time(NULL);
     struct tm* tm_info = localtime(&t);
@@ -87,19 +87,19 @@ prv_log(enum te_log_category category, const char* message, char* filepath, int 
 #endif
 #endif
 
-//#if !defined(ENGINE_EDITOR) && defined(ENGINE_DEBUG_TOOLS)
-//    if (category == LOG_WARN) {
-//        debug_drawer_draw_text_color(message, 5.0f, (vec3){1.0f, 1.0f, 0.0f});
-//    } else if (category == LOG_ERROR) {
-//        debug_drawer_draw_text_color(message, 5.0f, (vec3){1.0f, 0.0f, 0.0f});
-//    }
-//#endif
+    //#if !defined(ENGINE_EDITOR) && defined(ENGINE_DEBUG_TOOLS)
+    //    if (category == LOG_WARN) {
+    //        debug_drawer_draw_text_color(message, 5.0f, (vec3){1.0f, 1.0f, 0.0f});
+    //    } else if (category == LOG_ERROR) {
+    //        debug_drawer_draw_text_color(message, 5.0f, (vec3){1.0f, 0.0f, 0.0f});
+    //    }
+    //#endif
 
     fclose(log_file);
 }
 
 void
-prv_log_fmt(enum te_log_category category, char* filepath, int line, const char* fmt, ...) {
+prv_log_fmt(enum te_log_category category, const char* filepath, int line, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
     va_list args_copy;
