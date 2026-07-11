@@ -6,10 +6,7 @@
 #include <game_instance.h>
 #include <render/renderer.h>
 #include <render/render_target.h>
-
-#if defined(DEBUG)
 #include <io/log.h>
-#endif
 
 ge_camera_node::ge_camera_node() : ge_camera_node("Camera Node") {}
 
