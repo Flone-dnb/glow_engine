@@ -6,6 +6,10 @@ class ge_game_instance;
 class ge_camera_node;
 class ge_window;
 
+// The total number of frames that can be submitted to the GPU without waiting
+// for the GPU to catch up.
+#define GE_RENDER_FRAMES_IN_FLIGHT_COUNT 2
+
 // Base class for implementing a renderer.
 class ge_renderer {
     // Game instance creates renderer.

@@ -4,6 +4,11 @@
 #include <io/log.h>
 #include <misc/string_funcs.h>
 #include <game_instance.h>
+#include <node/camera_node.h>
+#include <render/render_target.h>
+#include <render/directx/directx_resource.h>
+#include <render/directx/directx_render_target.h>
+#include <render/directx/directx_descriptor_heap.h>
 #include <render/directx/directx_swap_chain.h>
 #include <window.h>
 #include <dxgidebug.h>
@@ -25,28 +30,9 @@ get_screen_refresh_rate(int& numerator, int& denominator) {
     SDL_free(displays);
 }
 
-// Helper function for logging.
-static std::string
-hresult_to_string(HRESULT result) {
-    LPSTR error_msg = nullptr;
-    FormatMessageA(
-        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, result,
-        MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), reinterpret_cast<LPSTR>(&error_msg), 0, nullptr);
-
-    std::string out;
-    if (error_msg != nullptr) {
-        out = error_msg;
-        LocalFree(error_msg);
-    } else {
-        out += "unknown error";
-    }
-
-    return out;
-}
-
 // D3d Debug layer callback.
 #if defined(DEBUG)
-void
+static void
 dx_debug_layer_msg_callback(
     D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID id, LPCSTR msg, void* context) {
     ge_log_error_fmt("[debug layer] %s", msg);
@@ -54,6 +40,12 @@ dx_debug_layer_msg_callback(
 #endif
 
 ge_directx_renderer::ge_directx_renderer(ge_game_instance* game_instance) : ge_renderer(game_instance) {
+    frame_res_idx = 0;
+    next_fence_value.store(1);
+
+    min_depth = 0.0f;
+    max_depth = 1.0f;
+
     // Enable debug layer in DEBUG mode.
     DWORD debugFactoryFlags = 0;
 #if defined(DEBUG)
@@ -110,6 +102,13 @@ ge_directx_renderer::ge_directx_renderer(ge_game_instance* game_instance) : ge_r
         abort();
     }
 
+    // Create fence.
+    result = dx_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&dx_fence));
+    if (FAILED(result)) {
+        ge_log_error(hresult_to_string(result).c_str());
+        abort();
+    }
+
 #if defined(DEBUG)
     if (dx_debug != nullptr) {
         // Create debug message queue for message callback.
@@ -145,7 +144,7 @@ ge_directx_renderer::ge_directx_renderer(ge_game_instance* game_instance) : ge_r
     for (ge_directx_frame_resource*& res : frame_resources) {
         res = new ge_directx_frame_resource();
 
-        res->fence = 0;
+        res->fence_value = 0;
 
         result = dx_device->CreateCommandAllocator(
             D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(res->dx_command_allocator.GetAddressOf()));
@@ -164,7 +163,17 @@ ge_directx_renderer::ge_directx_renderer(ge_game_instance* game_instance) : ge_r
         ge_log_error(hresult_to_string(result).c_str());
         abort();
     }
-    dx_command_list->Close(); // start in closed state because on frame draw we do reset (switching closed->open state)
+    result = dx_command_list->Close(); // start in closed state because on frame draw we do reset (switching closed->open state)
+    if (FAILED(result)) {
+        ge_log_error(hresult_to_string(result).c_str());
+        abort();
+    }
+
+    // Create heaps.
+    rtv_heap = new ge_directx_descriptor_heap(this, GE_DDHT_RTV);
+    dsv_heap = new ge_directx_descriptor_heap(this, GE_DDHT_DSV);
+    cbv_srv_uav_heap = new ge_directx_descriptor_heap(this, GE_DDHT_CBV_SRV_UAV);
+    sampler_heap = new ge_directx_descriptor_heap(this, GE_DDHT_SAMPLER);
 
     // Create swap chain.
     std::vector<DXGI_MODE_DESC> display_modes = get_supported_display_modes();
@@ -174,13 +183,83 @@ ge_directx_renderer::ge_directx_renderer(ge_game_instance* game_instance) : ge_r
 }
 
 ge_directx_renderer::~ge_directx_renderer() {
+    wait_for_gpu_to_finish_work();
+
+    delete rtv_heap;
+    delete dsv_heap;
+    delete cbv_srv_uav_heap;
+    delete sampler_heap;
+
     for (ge_directx_frame_resource* res : frame_resources) {
         delete res;
     }
 }
 
+ge_directx_descriptor_heap*
+ge_directx_renderer::get_rtv_descriptor_heap() {
+    return rtv_heap;
+}
+
+ge_directx_descriptor_heap*
+ge_directx_renderer::get_dsv_descriptor_heap() {
+    return dsv_heap;
+}
+
+ge_directx_descriptor_heap*
+ge_directx_renderer::get_cbv_srv_uav_descriptor_heap() {
+    return cbv_srv_uav_heap;
+}
+
+ge_directx_descriptor_heap*
+ge_directx_renderer::get_sampler_descriptor_heap() {
+    return sampler_heap;
+}
+
+std::mutex&
+ge_directx_renderer::get_draw_mutex() {
+    return mtx_draw;
+}
+
+ID3D12Device*
+ge_directx_renderer::get_device() {
+    return dx_device.Get();
+}
+
 void
-ge_directx_renderer::draw_next_frame() {}
+ge_directx_renderer::draw_next_frame() {
+    // Wait for this frame resource to no longer be used by the GPU.
+    ge_directx_frame_resource* frame_res = frame_resources[frame_res_idx];
+    wait_for_fence_value(frame_res->fence_value);
+
+    std::lock_guard<std::mutex> frame_guard(mtx_draw);
+
+    dx_command_list->Reset(frame_res->dx_command_allocator.Get(), nullptr);
+
+    // TODO: this will be moved in some other place later
+    dx_command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    for (ge_camera_node* camera : get_registered_cameras()) {
+        ge_directx_render_target* rt = dynamic_cast<ge_directx_render_target*>(camera->get_render_target());
+        set_viewport(rt);
+
+        float clear_color[4];
+        rt->get_clear_color(clear_color);
+        dx_command_list->ClearRenderTargetView(
+            rt->get_resource()->get_bound_descriptor_cpu_handle(GE_DDT_RTV), clear_color, 0,
+            nullptr);
+
+        HRESULT result = dx_command_list->Close();
+        if (FAILED(result)) {
+            ge_log_error(hresult_to_string(result).c_str());
+            abort();
+        }
+
+        ID3D12CommandList* lists[1] = {dx_command_list.Get()};
+        dx_command_queue->ExecuteCommandLists(1, lists);
+    }
+
+    frame_res_idx = size_t(frame_res_idx + 1) % frame_resources.size();
+}
 
 void
 ge_directx_renderer::on_after_new_window_created(ge_window* window) {
@@ -386,4 +465,60 @@ ge_directx_renderer::create_swap_chain_for_window(
         ge_log_error(hresult_to_string(result).c_str());
         abort();
     }
+}
+
+void
+ge_directx_renderer::wait_for_fence_value(UINT64 fence_to_wait_for) {
+    if (dx_fence->GetCompletedValue() >= fence_to_wait_for) {
+        return;
+    }
+
+    HANDLE event = CreateEventEx(nullptr, nullptr, FALSE, EVENT_ALL_ACCESS);
+    if (event == nullptr) {
+        ge_log_error("failed to create event to wait for a fence");
+        abort();
+    }
+
+    HRESULT result = dx_fence->SetEventOnCompletion(fence_to_wait_for, event);
+    if (FAILED(result)) {
+        ge_log_error(hresult_to_string(result).c_str());
+        abort();
+    }
+
+    WaitForSingleObject(event, INFINITE);
+    CloseHandle(event);
+}
+
+void
+ge_directx_renderer::wait_for_gpu_to_finish_work() {
+    UINT64 fence = next_fence_value.fetch_add(1);
+
+    HRESULT result = dx_command_queue->Signal(dx_fence.Get(), fence);
+    if (FAILED(result)) {
+        ge_log_error(hresult_to_string(result).c_str());
+        abort();
+    }
+
+    wait_for_fence_value(fence);
+}
+
+void
+ge_directx_renderer::set_viewport(ge_render_target* render_target) {
+    D3D12_VIEWPORT viewport;
+    viewport.TopLeftX = 0;
+    viewport.TopLeftY = 0;
+    viewport.Width = (float)render_target->get_width();
+    viewport.Height = (float)render_target->get_height();
+    viewport.MinDepth = min_depth;
+    viewport.MaxDepth = max_depth;
+
+    dx_command_list->RSSetViewports(1, &viewport);
+
+    D3D12_RECT rect;
+    rect.left = 0;
+    rect.top = 0;
+    rect.right = render_target->get_width();
+    rect.bottom = render_target->get_height();
+
+    dx_command_list->RSSetScissorRects(1, &rect);
 }

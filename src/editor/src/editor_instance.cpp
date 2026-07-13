@@ -14,7 +14,7 @@ ge_editor_instance::on_game_started() {
     window->get_size(window_width, window_height);
 
     // Create render target.
-    render_target = new ge_render_target(window_width, window_height);
+    render_target = ge_render_target::create(get_renderer(), window_width, window_height);
     window->set_render_target(render_target);
 
     // Setup sample world.
@@ -40,7 +40,7 @@ ge_editor_instance::on_window_size_changed(ge_window* changed_window) {
     unsigned int window_width, window_height;
     window->get_size(window_width, window_height);
 
-    render_target = new ge_render_target(window_width, window_height);
+    render_target = ge_render_target::create(get_renderer(), window_width, window_height);
     window->set_render_target(render_target);
     if (viewport_camera != nullptr) {
         viewport_camera->set_render_target(render_target);

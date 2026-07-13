@@ -9,6 +9,7 @@ set(PROJECT_SOURCES
     include/render/render_target.h
     include/render/renderer.h
     include/render/swap_chain.h
+    include/render/texture_format.h
     include/io/log.h
     include/io/paths.h
     include/io/filesystem.h
@@ -17,6 +18,7 @@ set(PROJECT_SOURCES
     include/shape/frustum.h
     include/shape/plane.h
     include/shape/aabb.h
+    include/material/texture_filtering.h
     include/node/node.h
     include/node/spatial_node.h
     include/node/camera_node.h
@@ -46,6 +48,12 @@ set(PROJECT_WIN32_SOURCES
     src/render/directx/directx_renderer.h
     src/render/directx/directx_swap_chain.cpp
     src/render/directx/directx_swap_chain.h
+    src/render/directx/directx_render_target.cpp
+    src/render/directx/directx_render_target.h
+    src/render/directx/directx_resource.h
+    src/render/directx/directx_resource.cpp
+    src/render/directx/directx_descriptor_heap.h
+    src/render/directx/directx_descriptor_heap.cpp
 )
 
 # Append Windows specific sources if we are on Windows.
