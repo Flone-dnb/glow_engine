@@ -5,6 +5,7 @@
 #include <window.h>
 #include <world/world_manager.h>
 #include <render/renderer.h>
+#include <render/swap_chain.h>
 #include <misc/globals.h>
 #define SDL_MAIN_HANDLED
 #include <SDL3/SDL_init.h>
@@ -188,15 +189,24 @@ ge_game_instance::run_game_loop(unsigned int headless_tickrate) {
             break;
         }
 
+        // Tick systems.
         world_manager->on_tick();
         on_tick(delta_time_sec);
 
+        // Draw frame.
         renderer->draw_next_frame();
-
         for (ge_window* window : windows) {
-            window->draw_render_target();
+            if (window->render_target == nullptr) {
+                continue;
+            }
+            window->get_swap_chain()->copy_from_render_target(window->render_target);
+        }
+        renderer->submit_gpu_commands();
+        for (ge_window* window : windows) {
+            window->get_swap_chain()->present();
         }
 
+        // Sleep if needed.
         if (is_headless_mode && windows.empty()) {
             float time_took_ms = (float)((SDL_GetPerformanceCounter() - current_time_counter) * 1000)
                                  / (float)(SDL_GetPerformanceFrequency());

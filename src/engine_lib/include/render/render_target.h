@@ -1,5 +1,7 @@
 #pragma once
 
+#include <glm/vec4.hpp>
+
 class ge_renderer;
 
 // Basically a texture. Cameras render to this texture and windows can display it,
@@ -7,7 +9,9 @@ class ge_renderer;
 class ge_render_target {
   public:
     // Creates a new render target with specified width and height (in pixels).
-    static ge_render_target* create(ge_renderer* renderer, unsigned int width, unsigned int height);
+    static ge_render_target* create(
+        ge_renderer* renderer, unsigned int width, unsigned int height,
+        const glm::vec4& clear_color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
 
     virtual ~ge_render_target() = default;
 
@@ -19,15 +23,15 @@ class ge_render_target {
     unsigned int get_width();
     unsigned int get_height();
 
-    void get_clear_color(float clear[4]);
+    glm::vec4 get_clear_color();
 
   protected:
-    ge_render_target(unsigned int width, unsigned int height);
+    ge_render_target(unsigned int width, unsigned int height, const glm::vec4& clear_color);
 
   private:
     // in pixels
     unsigned int width;
     unsigned int height;
 
-    float clear_color[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+    glm::vec4 clear_color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 };

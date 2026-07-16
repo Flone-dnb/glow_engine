@@ -4,17 +4,18 @@
 #include <world/world_manager.h>
 #include <node/camera_node.h>
 #include <world/world.h>
+#include <render/swap_chain.h>
 #include <window.h>
 
 void
 ge_editor_instance::on_game_started() {
     // Create window.
     window = create_window_maximized("glow engine editor");
-    unsigned int window_width, window_height;
-    window->get_size(window_width, window_height);
+    unsigned int rt_width, rt_height;
+    window->get_swap_chain()->get_size(rt_width, rt_height);
 
     // Create render target.
-    render_target = ge_render_target::create(get_renderer(), window_width, window_height);
+    render_target = ge_render_target::create(get_renderer(), rt_width, rt_height);
     window->set_render_target(render_target);
 
     // Setup sample world.
@@ -22,29 +23,6 @@ ge_editor_instance::on_game_started() {
     viewport_camera = new ge_camera_node();
     viewport_camera->set_render_target(render_target);
     world->get_root_node()->attach_child_node(viewport_camera);
-}
-
-void
-ge_editor_instance::on_window_size_changed(ge_window* changed_window) {
-    if (changed_window != window) {
-        return;
-    }
-
-    if (viewport_camera != nullptr) {
-        viewport_camera->set_render_target(nullptr);
-    }
-    window->set_render_target(nullptr);
-
-    delete render_target;
-
-    unsigned int window_width, window_height;
-    window->get_size(window_width, window_height);
-
-    render_target = ge_render_target::create(get_renderer(), window_width, window_height);
-    window->set_render_target(render_target);
-    if (viewport_camera != nullptr) {
-        viewport_camera->set_render_target(render_target);
-    }
 }
 
 void

@@ -47,9 +47,6 @@ class ge_window {
 
     // Called by game instance to process available window events.
     void process_window_events();
-    
-    // Called by game instance to draw from render target.
-    void draw_render_target();
 
     // Render target that this window displays.
     ge_render_target* render_target;

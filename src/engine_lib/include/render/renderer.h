@@ -5,6 +5,7 @@
 class ge_game_instance;
 class ge_camera_node;
 class ge_window;
+class ge_mesh_renderer;
 
 // The total number of frames that can be submitted to the GPU without waiting
 // for the GPU to catch up.
@@ -24,8 +25,9 @@ class ge_renderer {
     ge_renderer(const ge_renderer&) = delete;
     ge_renderer& operator=(const ge_renderer&) = delete;
 
-    // Returns always valid pointer.
+    // Returns always valid pointer, valid while the renderer exists.
     ge_game_instance* get_game_instance();
+    ge_mesh_renderer* get_mesh_renderer();
 
   protected:
     // Use to create a new renderer.
@@ -37,6 +39,10 @@ class ge_renderer {
     const std::vector<ge_camera_node*>& get_registered_cameras() const;
 
     virtual void draw_next_frame() = 0;
+
+    // Called after @ref draw_next_frame and after windows record present commands.
+    virtual void submit_gpu_commands() = 0;
+
     virtual void on_after_new_window_created(ge_window* window) {};
 
   private:
@@ -48,4 +54,5 @@ class ge_renderer {
     std::vector<ge_camera_node*> registered_cameras;
 
     ge_game_instance* game_instance;
+    ge_mesh_renderer* mesh_renderer;
 };

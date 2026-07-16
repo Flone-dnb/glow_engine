@@ -14,7 +14,6 @@ class ge_editor_instance : public ge_game_instance {
 
   protected:
     virtual void on_game_started() override;
-    virtual void on_window_size_changed(ge_window* changed_window) override;
     virtual void on_game_finished() override;
 
   private:

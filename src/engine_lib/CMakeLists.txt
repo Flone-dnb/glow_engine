@@ -10,6 +10,8 @@ set(PROJECT_SOURCES
     include/render/renderer.h
     include/render/swap_chain.h
     include/render/texture_format.h
+    include/render/gpu_resource.h
+    include/render/mesh_renderer.h
     include/io/log.h
     include/io/paths.h
     include/io/filesystem.h
@@ -18,10 +20,16 @@ set(PROJECT_SOURCES
     include/shape/frustum.h
     include/shape/plane.h
     include/shape/aabb.h
+    include/shader/shader_manager.h
+    include/shader/shader.h
     include/material/texture_filtering.h
+    include/material/material.h
+    include/geometry/vertex_pack.h
+    include/geometry/mesh_generator.h
     include/node/node.h
     include/node/spatial_node.h
     include/node/camera_node.h
+    include/node/mesh_node.h
     src/game_instance.cpp
     src/window.cpp
     src/world/world_manager.cpp
@@ -30,6 +38,9 @@ set(PROJECT_SOURCES
     src/render/renderer.cpp
     src/render/swap_chain.cpp
     src/render/dummy_renderer.h
+    src/render/dummy_mesh_renderer.h
+    src/render/gpu_resource.cpp
+    src/render/mesh_renderer.cpp
     src/io/log.cpp
     src/io/paths.cpp
     src/io/filesystem.cpp
@@ -38,9 +49,15 @@ set(PROJECT_SOURCES
     src/shape/frustum.cpp
     src/shape/plane.cpp
     src/shape/aabb.cpp
+    src/shader/shader_manager.cpp
+    src/shader/shader.cpp
+    src/material/material.cpp
+    src/geometry/vertex_pack.cpp
+    src/geometry/mesh_generator.cpp
     src/node/node.cpp
     src/node/spatial_node.cpp
     src/node/camera_node.cpp
+    src/node/mesh_node.cpp
 )
 
 set(PROJECT_WIN32_SOURCES
@@ -54,6 +71,12 @@ set(PROJECT_WIN32_SOURCES
     src/render/directx/directx_resource.cpp
     src/render/directx/directx_descriptor_heap.h
     src/render/directx/directx_descriptor_heap.cpp
+    src/render/directx/directx_mesh_renderer.h
+    src/render/directx/directx_mesh_renderer.cpp
+    src/render/directx/directx_pso_manager.h
+    src/render/directx/directx_pso_manager.cpp
+    src/shader/directx/directx_shader.cpp
+    src/shader/directx/directx_shader.h
 )
 
 # Append Windows specific sources if we are on Windows.

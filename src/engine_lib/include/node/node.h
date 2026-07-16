@@ -4,6 +4,8 @@
 #include <vector>
 
 class ge_world;
+class ge_renderer;
+class ge_game_instance;
 
 // Base class for game entities.
 // Implements hierarchy functionality: allows attaching node to some (other) parent node.
@@ -38,6 +40,8 @@ class ge_node {
 
     // Returns `nullptr` if not spawned, named this was specifically to tell that `nullptr` can be returned.
     ge_world* get_world_if_spawned();
+    ge_renderer* get_renderer_if_spawned();
+    ge_game_instance* get_game_instance_if_spawned();
 
     // Do not delete returned string, valid while the node exists and while its name is not changed.
     const char* get_name();

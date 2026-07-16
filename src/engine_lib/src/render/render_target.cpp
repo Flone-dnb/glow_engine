@@ -5,17 +5,18 @@
 #endif
 
 ge_render_target*
-ge_render_target::create(ge_renderer* renderer, unsigned int width, unsigned int height) {
+ge_render_target::create(ge_renderer* renderer, unsigned int width, unsigned int height, const glm::vec4& clear_color) {
 #if defined(WIN32)
-    return new ge_directx_render_target(renderer, width, height);
+    return new ge_directx_render_target(renderer, width, height, clear_color);
 #else
-    return new ge_render_target(width, height);
+    return new ge_render_target(width, height, clear_color);
 #endif
 }
 
-ge_render_target::ge_render_target(unsigned int width, unsigned int height) {
+ge_render_target::ge_render_target(unsigned int width, unsigned int height, const glm::vec4& clear_color) {
     this->width = width;
     this->height = height;
+    this->clear_color = clear_color;
 }
 
 unsigned int
@@ -28,7 +29,7 @@ ge_render_target::get_height() {
     return height;
 }
 
-void
-ge_render_target::get_clear_color(float clear[4]) {
-    clear = clear_color;
+glm::vec4
+ge_render_target::get_clear_color() {
+    return clear_color;
 }

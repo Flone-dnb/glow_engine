@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <io/log.h>
+#include <render/mesh_renderer.h>
 
 #if defined(WIN32)
 #include <render/directx/directx_renderer.h>
@@ -11,18 +12,28 @@
 ge_renderer*
 ge_renderer::create(ge_game_instance* game_instance) {
 #if defined(WIN32)
-    return new ge_directx_renderer(game_instance);
+    ge_renderer* renderer = new ge_directx_renderer(game_instance);
 #else
     ge_log_info("creating a dummy renderer (rendering is disabled)");
-    return new ge_dummy_renderer(game_instance);
+    ge_renderer* renderer = new ge_dummy_renderer(game_instance);
 #endif
+
+    renderer->mesh_renderer = ge_mesh_renderer::create(renderer);
+    return renderer;
 }
 
-ge_renderer::ge_renderer(ge_game_instance* game_instance) { this->game_instance = game_instance; }
+ge_renderer::ge_renderer(ge_game_instance* game_instance) {
+    this->game_instance = game_instance;
+}
 
 ge_game_instance*
 ge_renderer::get_game_instance() {
     return game_instance;
+}
+
+ge_mesh_renderer*
+ge_renderer::get_mesh_renderer() {
+    return mesh_renderer;
 }
 
 const std::vector<ge_camera_node*>&

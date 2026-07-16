@@ -1,6 +1,9 @@
 #include <node/node.h>
 
 #include <io/log.h>
+#include <world/world.h>
+#include <world/world_manager.h>
+#include <game_instance.h>
 
 ge_node::ge_node() : ge_node("Node") {}
 
@@ -107,6 +110,22 @@ ge_node::get_child_nodes_ref() const {
 ge_world*
 ge_node::get_world_if_spawned() {
     return world;
+}
+
+ge_renderer*
+ge_node::get_renderer_if_spawned() {
+    if (world == nullptr) {
+        return nullptr;
+    }
+    return world->get_world_manager()->get_game_instance()->get_renderer();
+}
+
+ge_game_instance*
+ge_node::get_game_instance_if_spawned() {
+    if (world == nullptr) {
+        return nullptr;
+    }
+    return world->get_world_manager()->get_game_instance();
 }
 
 bool

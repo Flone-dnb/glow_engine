@@ -62,7 +62,7 @@ ge_window::process_window_events() {
     // note: don't check requested_to_close here, game instance will check that
 
     SDL_Event event;
-    while (SDL_PollEvent(&event)) {
+    while (SDL_PollEvent(&event) && !requested_to_close) {
         switch (event.type) {
             case (SDL_EVENT_WINDOW_RESIZED):
             case (SDL_EVENT_WINDOW_MAXIMIZED):
@@ -76,13 +76,4 @@ ge_window::process_window_events() {
             }
         }
     }
-}
-
-void
-ge_window::draw_render_target() {
-    if (render_target == nullptr) {
-        return;
-    }
-
-    // TODO
 }

@@ -10,10 +10,12 @@
 #include <render/directx/directx_render_target.h>
 #include <render/directx/directx_descriptor_heap.h>
 #include <render/directx/directx_swap_chain.h>
+#include <render/directx/directx_pso_manager.h>
 #include <window.h>
 #include <dxgidebug.h>
 #include <SDL3/SDL_video.h>
-#
+#include <glm/gtc/type_ptr.hpp>
+
 static void
 get_screen_refresh_rate(int& numerator, int& denominator) {
     int display_count;
@@ -163,7 +165,19 @@ ge_directx_renderer::ge_directx_renderer(ge_game_instance* game_instance) : ge_r
         ge_log_error(hresult_to_string(result).c_str());
         abort();
     }
-    result = dx_command_list->Close(); // start in closed state because on frame draw we do reset (switching closed->open state)
+    result = dx_command_list
+                 ->Close(); // start in closed state because on frame draw we do reset (switching closed->open state)
+    if (FAILED(result)) {
+        ge_log_error(hresult_to_string(result).c_str());
+        abort();
+    }
+
+    // Create memory allocator.
+    D3D12MA::ALLOCATOR_DESC mem_alloc_desc{};
+    mem_alloc_desc.Flags = D3D12MA::ALLOCATOR_FLAG_DEFAULT_POOLS_NOT_ZEROED;
+    mem_alloc_desc.pDevice = dx_device.Get();
+    mem_alloc_desc.pAdapter = dx_adapter.Get();
+    result = D3D12MA::CreateAllocator(&mem_alloc_desc, mem_allocator.ReleaseAndGetAddressOf());
     if (FAILED(result)) {
         ge_log_error(hresult_to_string(result).c_str());
         abort();
@@ -180,10 +194,23 @@ ge_directx_renderer::ge_directx_renderer(ge_game_instance* game_instance) : ge_r
     for (ge_window* window : get_game_instance()->get_windows()) {
         create_swap_chain_for_window(window, display_modes);
     }
+
+    pso_manager = new ge_directx_pso_manager(this);
 }
 
 ge_directx_renderer::~ge_directx_renderer() {
     wait_for_gpu_to_finish_work();
+
+    while (!queued_resource_destructions.empty()) {
+        if (queued_resource_destructions.front()()) {
+            queued_resource_destructions.pop();
+        } else {
+            ge_log_error("renderer is being destroyed but some resources are still waiting for GPU");
+            abort();
+        }
+    }
+
+    delete pso_manager;
 
     delete rtv_heap;
     delete dsv_heap;
@@ -215,6 +242,41 @@ ge_directx_renderer::get_sampler_descriptor_heap() {
     return sampler_heap;
 }
 
+void
+ge_directx_renderer::copy_resource(
+    ID3D12Resource* src, D3D12_RESOURCE_STATES src_state, ID3D12Resource* dst, D3D12_RESOURCE_STATES dst_state) {
+    D3D12_RESOURCE_BARRIER barriers[2]{};
+
+    barriers[0].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barriers[0].Transition.pResource = src;
+    barriers[0].Transition.StateBefore = src_state;
+    barriers[0].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
+    barriers[0].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+    barriers[1].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barriers[1].Transition.pResource = dst;
+    barriers[1].Transition.StateBefore = dst_state;
+    barriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+    barriers[1].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+    dx_command_list->ResourceBarrier(2, barriers);
+
+    dx_command_list->CopyResource(dst, src);
+
+    barriers[0].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
+    barriers[0].Transition.StateAfter = src_state;
+
+    barriers[1].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+    barriers[1].Transition.StateAfter = dst_state;
+
+    dx_command_list->ResourceBarrier(2, barriers);
+}
+
+void
+ge_directx_renderer::queue_resource_destruction(const std::function<bool()>& check) {
+    queued_resource_destructions.push(check);
+}
+
 std::mutex&
 ge_directx_renderer::get_draw_mutex() {
     return mtx_draw;
@@ -225,8 +287,31 @@ ge_directx_renderer::get_device() {
     return dx_device.Get();
 }
 
+ID3D12GraphicsCommandList*
+ge_directx_renderer::get_command_list() {
+    return dx_command_list.Get();
+}
+
+D3D12MA::Allocator*
+ge_directx_renderer::get_mem_allocator() {
+    return mem_allocator.Get();
+}
+
+ge_directx_pso_manager*
+ge_directx_renderer::get_pso_manager() {
+    return pso_manager;
+}
+
 void
 ge_directx_renderer::draw_next_frame() {
+    while (!queued_resource_destructions.empty()) {
+        if (queued_resource_destructions.front()()) {
+            queued_resource_destructions.pop();
+        } else {
+            break;
+        }
+    }
+
     // Wait for this frame resource to no longer be used by the GPU.
     ge_directx_frame_resource* frame_res = frame_resources[frame_res_idx];
     wait_for_fence_value(frame_res->fence_value);
@@ -242,21 +327,29 @@ ge_directx_renderer::draw_next_frame() {
         ge_directx_render_target* rt = dynamic_cast<ge_directx_render_target*>(camera->get_render_target());
         set_viewport(rt);
 
-        float clear_color[4];
-        rt->get_clear_color(clear_color);
+        glm::vec4 clear_color = rt->get_clear_color();
         dx_command_list->ClearRenderTargetView(
-            rt->get_resource()->get_bound_descriptor_cpu_handle(GE_DDT_RTV), clear_color, 0,
-            nullptr);
-
-        HRESULT result = dx_command_list->Close();
-        if (FAILED(result)) {
-            ge_log_error(hresult_to_string(result).c_str());
-            abort();
-        }
-
-        ID3D12CommandList* lists[1] = {dx_command_list.Get()};
-        dx_command_queue->ExecuteCommandLists(1, lists);
+            rt->get_resource()->get_bound_descriptor_cpu_handle(GE_DDT_RTV), glm::value_ptr(clear_color), 0, nullptr);
     }
+
+    // Done. Note: don't close/execute command list, we will do this after windows do present.
+}
+
+void
+ge_directx_renderer::submit_gpu_commands() {
+    HRESULT result = dx_command_list->Close();
+    if (FAILED(result)) {
+        ge_log_error(hresult_to_string(result).c_str());
+        abort();
+    }
+
+    ID3D12CommandList* lists[1] = {dx_command_list.Get()};
+    dx_command_queue->ExecuteCommandLists(1, lists);
+
+    // Save "commands done" fence.
+    ge_directx_frame_resource* frame_res = frame_resources[frame_res_idx];
+    frame_res->fence_value = next_fence_value.fetch_add(1);
+    dx_command_queue->Signal(dx_fence.Get(), frame_res->fence_value);
 
     frame_res_idx = size_t(frame_res_idx + 1) % frame_resources.size();
 }
@@ -422,7 +515,7 @@ ge_directx_renderer::create_swap_chain_for_window(
     desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 
     // Allow tearing because we don't use VSync.
-    desc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+    desc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING; // also see swap chain's Present call flags
 
     // Flip model swapchains (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL and DXGI_SWAP_EFFECT_FLIP_DISCARD)
     // do not support multisampling.
@@ -454,7 +547,7 @@ ge_directx_renderer::create_swap_chain_for_window(
         abort();
     }
 
-    window->get_swap_chain() = new ge_directx_swap_chain(created_swap_chain);
+    window->get_swap_chain() = new ge_directx_swap_chain(this, created_swap_chain);
 
     ge_log_info_fmt("created a swap chain with display mode %ux%u", display_mode.Width, display_mode.Height);
 
@@ -487,6 +580,24 @@ ge_directx_renderer::wait_for_fence_value(UINT64 fence_to_wait_for) {
 
     WaitForSingleObject(event, INFINITE);
     CloseHandle(event);
+}
+
+UINT64
+ge_directx_renderer::signal_fence() {
+    UINT64 fence = next_fence_value.fetch_add(1);
+
+    HRESULT result = dx_command_queue->Signal(dx_fence.Get(), fence);
+    if (FAILED(result)) {
+        ge_log_error(hresult_to_string(result).c_str());
+        abort();
+    }
+
+    return fence;
+}
+
+bool
+ge_directx_renderer::is_fence_completed(UINT64 fence_value) {
+    return dx_fence->GetCompletedValue() >= fence_value;
 }
 
 void

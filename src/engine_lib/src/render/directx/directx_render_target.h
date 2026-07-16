@@ -7,7 +7,8 @@ class ge_directx_resource;
 
 class ge_directx_render_target : public ge_render_target {
   public:
-    ge_directx_render_target(ge_renderer* renderer, unsigned int width, unsigned int height);
+    ge_directx_render_target(
+        ge_renderer* renderer, unsigned int width, unsigned int height, const glm::vec4& clear_color);
 
     virtual ~ge_directx_render_target() override;
 
